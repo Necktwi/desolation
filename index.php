@@ -272,7 +272,7 @@
 
             function loadWorld() {
                 var request = new XMLHttpRequest();
-                request.open("GET", "/canvas/lib/world.txt");
+                request.open("GET", "/lib/world.txt");
                 request.onreadystatechange = function () {
                     if (request.readyState == 4) {
                         handleLoadedWorld(request.responseText);
