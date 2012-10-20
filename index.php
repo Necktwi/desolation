@@ -1,384 +1,395 @@
 <?php
-
-/**
- * This sample app is provided to kickstart your experience using Facebook's
- * resources for developers.  This sample app provides examples of several
- * key concepts, including authentication, the Graph API, and FQL (Facebook
- * Query Language). Please visit the docs at 'developers.facebook.com/docs'
- * to learn more about the resources available to you
- */
-
-// Provides access to app specific values such as your app id and app secret.
-// Defined in 'AppInfo.php'
-require_once('AppInfo.php');
-
-// Enforce https on production
-if (substr(AppInfo::getUrl(), 0, 8) != 'https://' && $_SERVER['REMOTE_ADDR'] != '127.0.0.1') {
-  header('Location: https://'. $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
-  exit();
-}
-
-// This provides access to helper functions defined in 'utils.php'
-require_once('utils.php');
-
-
-/*****************************************************************************
- *
- * The content below provides examples of how to fetch Facebook data using the
- * Graph API and FQL.  It uses the helper functions defined in 'utils.php' to
- * do so.  You should change this section so that it prepares all of the
- * information that you want to display to the user.
- *
- ****************************************************************************/
-
-require_once('sdk/src/facebook.php');
-
-$facebook = new Facebook(array(
-  'appId'  => AppInfo::appID(),
-  'secret' => AppInfo::appSecret(),
-  'sharedSession' => true,
-  'trustForwarded' => true,
-));
-
-$user_id = $facebook->getUser();
-if ($user_id) {
-  try {
-    // Fetch the viewer's basic information
-    $basic = $facebook->api('/me');
-  } catch (FacebookApiException $e) {
-    // If the call fails we check if we still have a user. The user will be
-    // cleared if the error is because of an invalid accesstoken
-    if (!$facebook->getUser()) {
-      header('Location: '. AppInfo::getUrl($_SERVER['REQUEST_URI']));
-      exit();
-    }
-  }
-
-  // This fetches some things that you like . 'limit=*" only returns * values.
-  // To see the format of the data you are retrieving, use the "Graph API
-  // Explorer" which is at https://developers.facebook.com/tools/explorer/
-  $likes = idx($facebook->api('/me/likes?limit=4'), 'data', array());
-
-  // This fetches 4 of your friends.
-  $friends = idx($facebook->api('/me/friends?limit=4'), 'data', array());
-
-  // And this returns 16 of your photos.
-  $photos = idx($facebook->api('/me/photos?limit=16'), 'data', array());
-
-  // Here is an example of a FQL call that fetches all of your friends that are
-  // using this app
-  $app_using_friends = $facebook->api(array(
-    'method' => 'fql.query',
-    'query' => 'SELECT uid, name FROM user WHERE uid IN(SELECT uid2 FROM friend WHERE uid1 = me()) AND is_app_user = 1'
-  ));
-}
-
-// Fetch the basic info of the app that they are using
-$app_info = $facebook->api('/'. AppInfo::appID());
-
-$app_name = idx($app_info, 'name', '');
-
+/* Author: Gowtham */
 ?>
-<!DOCTYPE html>
-<html xmlns:fb="http://ogp.me/ns/fb#" lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes" />
+<html><head>
+        <title>Learning WebGL — lesson 10</title>
+        <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
-    <title><?php echo he($app_name); ?></title>
-    <link rel="stylesheet" href="stylesheets/screen.css" media="Screen" type="text/css" />
-    <link rel="stylesheet" href="stylesheets/mobile.css" media="handheld, only screen and (max-width: 480px), only screen and (max-device-width: 480px)" type="text/css" />
+        <script type="text/javascript" src="/lib/glMatrix-0.9.5.min.js"></script>
+        <script type="text/javascript" src="/lib/webgl-utils.js"></script>
 
-    <!--[if IEMobile]>
-    <link rel="stylesheet" href="mobile.css" media="screen" type="text/css"  />
-    <![endif]-->
+        <script id="shader-fs" type="x-shader/x-fragment">
+            precision mediump float;
 
-    <!-- These are Open Graph tags.  They add meta data to your  -->
-    <!-- site that facebook uses when your content is shared     -->
-    <!-- over facebook.  You should fill these tags in with      -->
-    <!-- your data.  To learn more about Open Graph, visit       -->
-    <!-- 'https://developers.facebook.com/docs/opengraph/'       -->
-    <meta property="og:title" content="<?php echo he($app_name); ?>" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="<?php echo AppInfo::getUrl(); ?>" />
-    <meta property="og:image" content="<?php echo AppInfo::getUrl('/logo.png'); ?>" />
-    <meta property="og:site_name" content="<?php echo he($app_name); ?>" />
-    <meta property="og:description" content="My first app" />
-    <meta property="fb:app_id" content="<?php echo AppInfo::appID(); ?>" />
+            varying vec2 vTextureCoord;
 
-    <script type="text/javascript" src="/javascript/jquery-1.7.1.min.js"></script>
+            uniform sampler2D uSampler;
 
-    <script type="text/javascript">
-      function logResponse(response) {
-        if (console && console.log) {
-          console.log('The response was', response);
-        }
-      }
-
-      $(function(){
-        // Set up so we handle click on the buttons
-        $('#postToWall').click(function() {
-          FB.ui(
-            {
-              method : 'feed',
-              link   : $(this).attr('data-url')
-            },
-            function (response) {
-              // If response is null the user canceled the dialog
-              if (response != null) {
-                logResponse(response);
-              }
+            void main(void) {
+            gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
             }
-          );
-        });
+        </script>
 
-        $('#sendToFriends').click(function() {
-          FB.ui(
-            {
-              method : 'send',
-              link   : $(this).attr('data-url')
-            },
-            function (response) {
-              // If response is null the user canceled the dialog
-              if (response != null) {
-                logResponse(response);
-              }
+        <script id="shader-vs" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+
+            varying vec2 vTextureCoord;
+
+            void main(void) {
+            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+            vTextureCoord = aTextureCoord;
             }
-          );
-        });
+        </script>
 
-        $('#sendRequest').click(function() {
-          FB.ui(
-            {
-              method  : 'apprequests',
-              message : $(this).attr('data-message')
-            },
-            function (response) {
-              // If response is null the user canceled the dialog
-              if (response != null) {
-                logResponse(response);
-              }
+
+        <script type="text/javascript">
+
+            var gl;
+
+            function initGL(canvas) {
+                try {
+                    gl = canvas.getContext("experimental-webgl");
+                    gl.viewportWidth = canvas.width;
+                    gl.viewportHeight = canvas.height;
+                } catch (e) {
+                }
+                if (!gl) {
+                    alert("Could not initialise WebGL, sorry :-(");
+                }
             }
-          );
-        });
-      });
-    </script>
 
-    <!--[if IE]>
-      <script type="text/javascript">
-        var tags = ['header', 'section'];
-        while(tags.length)
-          document.createElement(tags.pop());
-      </script>
-    <![endif]-->
-  </head>
-  <body>
-    <div id="fb-root"></div>
-    <script type="text/javascript">
-      window.fbAsyncInit = function() {
-        FB.init({
-          appId      : '<?php echo AppInfo::appID(); ?>', // App ID
-          channelUrl : '//<?php echo $_SERVER["HTTP_HOST"]; ?>/channel.html', // Channel File
-          status     : true, // check login status
-          cookie     : true, // enable cookies to allow the server to access the session
-          xfbml      : true // parse XFBML
-        });
 
-        // Listen to the auth.login which will be called when the user logs in
-        // using the Login button
-        FB.Event.subscribe('auth.login', function(response) {
-          // We want to reload the page now so PHP can read the cookie that the
-          // Javascript SDK sat. But we don't want to use
-          // window.location.reload() because if this is in a canvas there was a
-          // post made to this page and a reload will trigger a message to the
-          // user asking if they want to send data again.
-          window.location = window.location;
-        });
+            function getShader(gl, id) {
+                var shaderScript = document.getElementById(id);
+                if (!shaderScript) {
+                    return null;
+                }
 
-        FB.Canvas.setAutoGrow();
-      };
+                var str = "";
+                var k = shaderScript.firstChild;
+                while (k) {
+                    if (k.nodeType == 3) {
+                        str += k.textContent;
+                    }
+                    k = k.nextSibling;
+                }
 
-      // Load the SDK Asynchronously
-      (function(d, s, id) {
-        var js, fjs = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) return;
-        js = d.createElement(s); js.id = id;
-        js.src = "//connect.facebook.net/en_US/all.js";
-        fjs.parentNode.insertBefore(js, fjs);
-      }(document, 'script', 'facebook-jssdk'));
-    </script>
+                var shader;
+                if (shaderScript.type == "x-shader/x-fragment") {
+                    shader = gl.createShader(gl.FRAGMENT_SHADER);
+                } else if (shaderScript.type == "x-shader/x-vertex") {
+                    shader = gl.createShader(gl.VERTEX_SHADER);
+                } else {
+                    return null;
+                }
 
-    <header class="clearfix">
-      <?php if (isset($basic)) { ?>
-      <p id="picture" style="background-image: url(https://graph.facebook.com/<?php echo he($user_id); ?>/picture?type=normal)"></p>
+                gl.shaderSource(shader, str);
+                gl.compileShader(shader);
 
-      <div>
-        <h1>Welcome, <strong><?php echo he(idx($basic, 'name')); ?></strong></h1>
-        <p class="tagline">
-          This is your app
-          <a href="<?php echo he(idx($app_info, 'link'));?>" target="_top"><?php echo he($app_name); ?></a>
-        </p>
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    alert(gl.getShaderInfoLog(shader));
+                    return null;
+                }
 
-        <div id="share-app">
-          <p>Share your app:</p>
-          <ul>
-            <li>
-              <a href="#" class="facebook-button" id="postToWall" data-url="<?php echo AppInfo::getUrl(); ?>">
-                <span class="plus">Post to Wall</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" class="facebook-button speech-bubble" id="sendToFriends" data-url="<?php echo AppInfo::getUrl(); ?>">
-                <span class="speech-bubble">Send Message</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" class="facebook-button apprequests" id="sendRequest" data-message="Test this awesome app">
-                <span class="apprequests">Send Requests</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <?php } else { ?>
-      <div>
-        <h1>Welcome</h1>
-        <div class="fb-login-button" data-scope="user_likes,user_photos"></div>
-      </div>
-      <?php } ?>
-    </header>
-
-    <section id="get-started">
-      <p>Welcome to your Facebook app, running on <span>heroku</span>!</p>
-      <a href="https://devcenter.heroku.com/articles/facebook" target="_top" class="button">Learn How to Edit This App</a>
-    </section>
-
-    <?php
-      if ($user_id) {
-    ?>
-
-    <section id="samples" class="clearfix">
-      <h1>Examples of the Facebook Graph API</h1>
-
-      <div class="list">
-        <h3>A few of your friends</h3>
-        <ul class="friends">
-          <?php
-            foreach ($friends as $friend) {
-              // Extract the pieces of info we need from the requests above
-              $id = idx($friend, 'id');
-              $name = idx($friend, 'name');
-          ?>
-          <li>
-            <a href="https://www.facebook.com/<?php echo he($id); ?>" target="_top">
-              <img src="https://graph.facebook.com/<?php echo he($id) ?>/picture?type=square" alt="<?php echo he($name); ?>">
-              <?php echo he($name); ?>
-            </a>
-          </li>
-          <?php
+                return shader;
             }
-          ?>
-        </ul>
-      </div>
 
-      <div class="list inline">
-        <h3>Recent photos</h3>
-        <ul class="photos">
-          <?php
-            $i = 0;
-            foreach ($photos as $photo) {
-              // Extract the pieces of info we need from the requests above
-              $id = idx($photo, 'id');
-              $picture = idx($photo, 'picture');
-              $link = idx($photo, 'link');
 
-              $class = ($i++ % 4 === 0) ? 'first-column' : '';
-          ?>
-          <li style="background-image: url(<?php echo he($picture); ?>);" class="<?php echo $class; ?>">
-            <a href="<?php echo he($link); ?>" target="_top"></a>
-          </li>
-          <?php
+            var shaderProgram;
+
+            function initShaders() {
+                var fragmentShader = getShader(gl, "shader-fs");
+                var vertexShader = getShader(gl, "shader-vs");
+
+                shaderProgram = gl.createProgram();
+                gl.attachShader(shaderProgram, vertexShader);
+                gl.attachShader(shaderProgram, fragmentShader);
+                gl.linkProgram(shaderProgram);
+
+                if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                    alert("Could not initialise shaders");
+                }
+
+                gl.useProgram(shaderProgram);
+
+                shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+                gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+                shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+                gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+
+                shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+                shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+                shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
             }
-          ?>
-        </ul>
-      </div>
 
-      <div class="list">
-        <h3>Things you like</h3>
-        <ul class="things">
-          <?php
-            foreach ($likes as $like) {
-              // Extract the pieces of info we need from the requests above
-              $id = idx($like, 'id');
-              $item = idx($like, 'name');
 
-              // This display's the object that the user liked as a link to
-              // that object's page.
-          ?>
-          <li>
-            <a href="https://www.facebook.com/<?php echo he($id); ?>" target="_top">
-              <img src="https://graph.facebook.com/<?php echo he($id) ?>/picture?type=square" alt="<?php echo he($item); ?>">
-              <?php echo he($item); ?>
-            </a>
-          </li>
-          <?php
+            function handleLoadedTexture(texture) {
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+                gl.bindTexture(gl.TEXTURE_2D, null);
             }
-          ?>
-        </ul>
-      </div>
 
-      <div class="list">
-        <h3>Friends using this app</h3>
-        <ul class="friends">
-          <?php
-            foreach ($app_using_friends as $auf) {
-              // Extract the pieces of info we need from the requests above
-              $id = idx($auf, 'uid');
-              $name = idx($auf, 'name');
-          ?>
-          <li>
-            <a href="https://www.facebook.com/<?php echo he($id); ?>" target="_top">
-              <img src="https://graph.facebook.com/<?php echo he($id) ?>/picture?type=square" alt="<?php echo he($name); ?>">
-              <?php echo he($name); ?>
-            </a>
-          </li>
-          <?php
+
+            var mudTexture;
+
+            function initTexture() {
+                mudTexture = gl.createTexture();
+                mudTexture.image = new Image();
+                mudTexture.image.onload = function () {
+                    handleLoadedTexture(mudTexture)
+                }
+
+                mudTexture.image.src = "/images/mud.gif";
             }
-          ?>
-        </ul>
-      </div>
-    </section>
 
-    <?php
-      }
-    ?>
 
-    <section id="guides" class="clearfix">
-      <h1>Learn More About Heroku &amp; Facebook Apps</h1>
-      <ul>
-        <li>
-          <a href="https://www.heroku.com/?utm_source=facebook&utm_medium=app&utm_campaign=fb_integration" target="_top" class="icon heroku">Heroku</a>
-          <p>Learn more about <a href="https://www.heroku.com/?utm_source=facebook&utm_medium=app&utm_campaign=fb_integration" target="_top">Heroku</a>, or read developer docs in the Heroku <a href="https://devcenter.heroku.com/" target="_top">Dev Center</a>.</p>
-        </li>
-        <li>
-          <a href="https://developers.facebook.com/docs/guides/web/" target="_top" class="icon websites">Websites</a>
-          <p>
-            Drive growth and engagement on your site with
-            Facebook Login and Social Plugins.
-          </p>
-        </li>
-        <li>
-          <a href="https://developers.facebook.com/docs/guides/mobile/" target="_top" class="icon mobile-apps">Mobile Apps</a>
-          <p>
-            Integrate with our core experience by building apps
-            that operate within Facebook.
-          </p>
-        </li>
-        <li>
-          <a href="https://developers.facebook.com/docs/guides/canvas/" target="_top" class="icon apps-on-facebook">Apps on Facebook</a>
-          <p>Let users find and connect to their friends in mobile apps and games.</p>
-        </li>
-      </ul>
-    </section>
-  </body>
+            var mvMatrix = mat4.create();
+            var mvMatrixStack = [];
+            var pMatrix = mat4.create();
+
+            function mvPushMatrix() {
+                var copy = mat4.create();
+                mat4.set(mvMatrix, copy);
+                mvMatrixStack.push(copy);
+            }
+
+            function mvPopMatrix() {
+                if (mvMatrixStack.length == 0) {
+                    throw "Invalid popMatrix!";
+                }
+                mvMatrix = mvMatrixStack.pop();
+            }
+
+
+            function setMatrixUniforms() {
+                gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+                gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+            }
+
+
+            function degToRad(degrees) {
+                return degrees * Math.PI / 180;
+            }
+
+
+
+            var currentlyPressedKeys = {};
+
+            function handleKeyDown(event) {
+                currentlyPressedKeys[event.keyCode] = true;
+            }
+
+
+            function handleKeyUp(event) {
+                currentlyPressedKeys[event.keyCode] = false;
+            }
+
+
+            var pitch = 0;
+            var pitchRate = 0;
+
+            var yaw = 0;
+            var yawRate = 0;
+
+            var xPos = 0;
+            var yPos = 0.4;
+            var zPos = 0;
+
+            var speed = 0;
+
+            function handleKeys() {
+                if (currentlyPressedKeys[33]) {
+                    // Page Up
+                    pitchRate = 0.1;
+                } else if (currentlyPressedKeys[34]) {
+                    // Page Down
+                    pitchRate = -0.1;
+                } else {
+                    pitchRate = 0;
+                }
+
+                if (currentlyPressedKeys[37] || currentlyPressedKeys[65]) {
+                    // Left cursor key or A
+                    yawRate = 0.1;
+                } else if (currentlyPressedKeys[39] || currentlyPressedKeys[68]) {
+                    // Right cursor key or D
+                    yawRate = -0.1;
+                } else {
+                    yawRate = 0;
+                }
+
+                if (currentlyPressedKeys[38] || currentlyPressedKeys[87]) {
+                    // Up cursor key or W
+                    speed = 0.003;
+                } else if (currentlyPressedKeys[40] || currentlyPressedKeys[83]) {
+                    // Down cursor key
+                    speed = -0.003;
+                } else {
+                    speed = 0;
+                }
+
+            }
+
+
+            var worldVertexPositionBuffer = null;
+            var worldVertexTextureCoordBuffer = null;
+
+            function handleLoadedWorld(data) {
+                var lines = data.split("\n");
+                var vertexCount = 0;
+                var vertexPositions = [];
+                var vertexTextureCoords = [];
+                for (var i in lines) {
+                    var vals = lines[i].replace(/^\s+/, "").split(/\s+/);
+                    if (vals.length == 5 && vals[0] != "//") {
+                        // It is a line describing a vertex; get X, Y and Z first
+                        vertexPositions.push(parseFloat(vals[0]));
+                        vertexPositions.push(parseFloat(vals[1]));
+                        vertexPositions.push(parseFloat(vals[2]));
+
+                        // And then the texture coords
+                        vertexTextureCoords.push(parseFloat(vals[3]));
+                        vertexTextureCoords.push(parseFloat(vals[4]));
+
+                        vertexCount += 1;
+                    }
+                }
+
+                worldVertexPositionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, worldVertexPositionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositions), gl.STATIC_DRAW);
+                worldVertexPositionBuffer.itemSize = 3;
+                worldVertexPositionBuffer.numItems = vertexCount;
+
+                worldVertexTextureCoordBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, worldVertexTextureCoordBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexTextureCoords), gl.STATIC_DRAW);
+                worldVertexTextureCoordBuffer.itemSize = 2;
+                worldVertexTextureCoordBuffer.numItems = vertexCount;
+
+                document.getElementById("loadingtext").textContent = "";
+            }
+
+
+            function loadWorld() {
+                var request = new XMLHttpRequest();
+                request.open("GET", "/canvas/lib/world.txt");
+                request.onreadystatechange = function () {
+                    if (request.readyState == 4) {
+                        handleLoadedWorld(request.responseText);
+                    }
+                }
+                request.send();
+            }
+
+
+
+            function drawScene() {
+                gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                if (worldVertexTextureCoordBuffer == null || worldVertexPositionBuffer == null) {
+                    return;
+                }
+
+                mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+                mat4.identity(mvMatrix);
+
+                mat4.rotate(mvMatrix, degToRad(-pitch), [1, 0, 0]);
+                mat4.rotate(mvMatrix, degToRad(-yaw), [0, 1, 0]);
+                mat4.translate(mvMatrix, [-xPos, -yPos, -zPos]);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, mudTexture);
+                gl.uniform1i(shaderProgram.samplerUniform, 0);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, worldVertexTextureCoordBuffer);
+                gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, worldVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, worldVertexPositionBuffer);
+                gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, worldVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+                setMatrixUniforms();
+                gl.drawArrays(gl.TRIANGLES, 0, worldVertexPositionBuffer.numItems);
+            }
+
+
+            var lastTime = 0;
+            // Used to make us "jog" up and down as we move forward.
+            var joggingAngle = 0;
+
+            function animate() {
+                var timeNow = new Date().getTime();
+                if (lastTime != 0) {
+                    var elapsed = timeNow - lastTime;
+
+                    if (speed != 0) {
+                        xPos -= Math.sin(degToRad(yaw)) * speed * elapsed;
+                        zPos -= Math.cos(degToRad(yaw)) * speed * elapsed;
+
+                        joggingAngle += elapsed * 0.6; // 0.6 "fiddle factor" - makes it feel more realistic :-)
+                        yPos = Math.sin(degToRad(joggingAngle)) / 20 + 0.4
+                    }
+
+                    yaw += yawRate * elapsed;
+                    pitch += pitchRate * elapsed;
+
+                }
+                lastTime = timeNow;
+            }
+
+
+            function tick() {
+                requestAnimFrame(tick);
+                handleKeys();
+                drawScene();
+                animate();
+            }
+
+
+
+            function webGLStart() {
+                var canvas = document.getElementById("lesson10-canvas");
+                initGL(canvas);
+                initShaders();
+                initTexture();
+                loadWorld();
+
+                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                gl.enable(gl.DEPTH_TEST);
+
+                document.onkeydown = handleKeyDown;
+                document.onkeyup = handleKeyUp;
+
+                tick();
+            }
+
+        </script>
+
+        <style type="text/css">
+            #loadingtext {
+                position:absolute;
+                top:250px;
+                left:150px;
+                font-size:2em;
+                color: white;
+            }
+        </style>
+
+
+
+    </head>
+
+
+    <body onload="webGLStart();">
+        <canvas id="lesson10-canvas" style="border: none;" width="500" height="500"></canvas>
+
+        <div id="loadingtext"></div>
+
+        <br>
+        Use the cursor keys or WASD to run around, and <code>Page Up</code>/<code>Page Down</code> to
+        look up and down.
+
+        <br>
+    </body>
 </html>
