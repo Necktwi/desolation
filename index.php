@@ -1,5 +1,8 @@
 <?php
-/* Author: Gowtham */
+$cache_expire = 60 * 60 * 24 * 365;
+header("Pragma: public");
+header("Cache-Control: max-age=" . $cache_expire);
+header('Expires: ' . gmdate('D, d M Y H:i:s', time() + $cache_expire) . ' GMT');
 ?>
 <html><head>
         <title>Learning WebGL — lesson 10</title>
@@ -19,7 +22,7 @@
             gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
             }
         </script>
-
+        <script src="//connect.facebook.net/en_US/all.js"></script>
         <script id="shader-vs" type="x-shader/x-vertex">
             attribute vec3 aVertexPosition;
             attribute vec2 aTextureCoord;
@@ -382,6 +385,31 @@
 
 
     <body onload="webGLStart();">
+        <div id="fb-root"></div>
+        <script>
+            window.fbAsyncInit = function() {
+                // init the FB JS SDK
+                FB.init({
+                    appId      : 'YOUR_APP_ID', // App ID from the App Dashboard
+                    channelUrl : '//WWW.YOUR_DOMAIN.COM/channel.html', // Channel File for x-domain communication
+                    status     : true, // check the login status upon init?
+                    cookie     : true, // set sessions cookies to allow your server to access the session?
+                    xfbml      : true  // parse XFBML tags on this page?
+                });
+
+                // Additional initialization code such as adding Event Listeners goes here
+
+            };
+
+            // Load the SDK's source Asynchronously
+            (function(d, debug){
+                var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+                if (d.getElementById(id)) {return;}
+                js = d.createElement('script'); js.id = id; js.async = true;
+                js.src = "//connect.facebook.net/en_US/all" + (debug ? "/debug" : "") + ".js";
+                ref.parentNode.insertBefore(js, ref);
+            }(document, /*debug*/ false));
+        </script>
         <canvas id="lesson10-canvas" style="border: none;" width="500" height="500"></canvas>
 
         <div id="loadingtext"></div>
