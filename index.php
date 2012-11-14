@@ -390,8 +390,8 @@ header('Expires: ' . gmdate('D, d M Y H:i:s', time() + $cache_expire) . ' GMT');
             window.fbAsyncInit = function() {
                 // init the FB JS SDK
                 FB.init({
-                    appId      : 'YOUR_APP_ID', // App ID from the App Dashboard
-                    channelUrl : '//WWW.YOUR_DOMAIN.COM/channel.html', // Channel File for x-domain communication
+                    appId      : '459566600748940', // App ID from the App Dashboard
+                    channelUrl : '//http://counterstrike-ksg.herokuapp.com/channel.html', // Channel File for x-domain communication
                     status     : true, // check the login status upon init?
                     cookie     : true, // set sessions cookies to allow your server to access the session?
                     xfbml      : true  // parse XFBML tags on this page?
